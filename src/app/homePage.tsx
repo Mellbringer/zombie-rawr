@@ -117,12 +117,6 @@ export default function HomePage() {
     }));
   }, [isClient]);
 
-  const generateRandomNickname = useCallback((): string => {
-    const prefixes = ["Salsa", "Zombi", "Vampir", "Downey", "Robert", "Windah", "Neko", "Shadow", "Ghost", "Pixel", "Nova"];
-    const randomPrefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const randomNumber = Math.floor(Math.random() * 10000);
-    return `${randomPrefix}${randomNumber}`;
-  }, []);
 
   const handleGameCodeChange = useCallback(((value: string) => {
     let processedCode = value;
@@ -175,14 +169,14 @@ export default function HomePage() {
   useEffect(() => {
     if (authLoading) return;
     localStorage.removeItem("nickname");
-    let defaultNick = generateRandomNickname();
+    let defaultNick = "";
     if (profile?.nickname) defaultNick = profile.nickname;
     else if (profile?.fullname) defaultNick = profile.fullname;
     else if (profile?.username) defaultNick = profile.username;
     else if (user?.email) defaultNick = user.email.split('@')[0];
     setNickname(defaultNick);
     localStorage.setItem("nickname", defaultNick);
-  }, [user, profile, authLoading, generateRandomNickname]);
+  }, [user, profile, authLoading]);
 
   const isInstalled =
     typeof window !== "undefined" &&
@@ -199,9 +193,22 @@ export default function HomePage() {
   const [errorDialogMessage, setErrorDialogMessage] = useState("");
 
   const handleJoinGame = useCallback(async () => {
-    if (!gameCode.trim() || !nickname.trim()) {
+    if (!gameCode.trim()) {
       setErrorDialogTitle(t("errorMessages.missingInputTitle") || "Input Tidak Lengkap");
-      setErrorDialogMessage(t("errorMessages.missingInput") || "Kode game dan nickname harus diisi!");
+      setErrorDialogMessage(t("errorMessages.missingInputCode") || "Kode game harus diisi!");
+      setIsErrorDialogOpen(true);
+      return;
+    }
+
+    if (!user) {
+      localStorage.setItem("pendingRoomCode", gameCode.toUpperCase());
+      router.push("/login");
+      return;
+    }
+
+    if (!nickname.trim()) {
+      setErrorDialogTitle(t("errorMessages.joinFailedTitle") || "Gagal Bergabung");
+      setErrorDialogMessage(t("errorMessages.missingNickname") || "Gagal mendapatkan nickname profil Anda.");
       setIsErrorDialogOpen(true);
       return;
     }
@@ -610,14 +617,8 @@ export default function HomePage() {
                           <Camera className="h-4 w-4 sm:h-5 sm:w-5" />
                         </Button>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <Input placeholder={t("nicknamePlaceholder")} value={nickname} onChange={(e) => handleNicknameChange(e.target.value)} className="bg-black/50 border-red-500/50 text-red-400 placeholder:text-red-400/50 text-center text-base sm:text-lg md:text-xl h-10 sm:h-12 rounded-xl flex-1" maxLength={20} />
-                        <Button variant="outline" size="icon" onClick={() => setNickname(generateRandomNickname())} className="border-red-500/50 text-red-400 hover:bg-red-500/20 h-10 sm:h-12 w-10 sm:w-12">
-                          <RefreshCw className="h-4 w-4 sm:h-5 sm:w-5" />
-                        </Button>
-                      </div>
                     </div>
-                    <Button onClick={handleJoinGame} disabled={!gameCode || !nickname || isJoining || authLoading} className="w-full bg-gradient-to-r from-red-900 to-red-700 text-white text-sm sm:text-base md:text-lg py-2 sm:py-3 md:py-4 rounded-xl border-2 border-red-700 shadow-[0_0_15px_rgba(239,68,68,0.5)]">
+                    <Button onClick={handleJoinGame} disabled={!gameCode || isJoining || authLoading} className="w-full bg-gradient-to-r from-red-900 to-red-700 text-white text-sm sm:text-base md:text-lg py-2 sm:py-3 md:py-4 rounded-xl border-2 border-red-700 shadow-[0_0_15px_rgba(239,68,68,0.5)]">
                       {isJoining ? t("joining") : t("joinButton")}
                     </Button>
                   </CardContent>

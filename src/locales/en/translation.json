@@ -89,7 +89,10 @@
     "fetchRoomFailed": "Failed to fetch room!",
     "saveSettingsFailed": "Failed to save settings!",
     "nicknameTaken": "Nickname is already taken in this room.",
-    "checkNicknameFailed": "Failed to validate nickname. Please try again."
+    "checkNicknameFailed": "Failed to validate nickname. Please try again.",
+    "missingInputTitle": "Incomplete Input",
+    "missingInputCode": "Game code is required!",
+    "missingNickname": "Failed to retrieve your profile nickname."
   },
   "start": "Start",
   "starting": "Starting...",
@@ -226,7 +229,7 @@
   "play": "Play",
   "joinTitle": "🔥 How to Join",
   "joinSteps": [
-    "Enter the game code and your name.",
+    "Enter the game code.",
     "Click Join.",
     "(Optional) Pick the character that will become your hero.",
     "Get ready… wait for the host to start the game."

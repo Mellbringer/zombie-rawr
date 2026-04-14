@@ -277,7 +277,7 @@ export default function CharacterSelectPage() {
           />
           <img src={`/logo/gameforsmartlogo-horror-v2.png`} alt="Logo" className="w-40 md:w-52 lg:w-64 h-auto" />
         </div>
-        <header className="flex flex-col gap-1 mb-6 text-center">
+        <header className="flex flex-col gap-1 text-center">
           <h1 className={`text-4xl md:text-6xl tracking-wider transition-all duration-150 text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.7)] animate-pulse ${flickerText ? "opacity-70" : "opacity-100"}`}
             style={{ textShadow: "0 0 10px rgba(239, 68, 68, 0.7)" }}>
             {t("settingsTitle")}
