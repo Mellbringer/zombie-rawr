@@ -6,28 +6,30 @@ import { useEffect } from "react"
 import LoadingScreen from "./LoadingScreen"
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth()
+  const { user, loading, isRestoringSession } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
   const publicRoutes = ["/login"]
   const isPublic = publicRoutes.includes(pathname) || /^\/join\/[A-Z0-9]{6}$/.test(pathname);
-;
+  ;
+
+  // Check if this is an OAuth callback (e.g., Google login redirect)
+  const isOAuthCallback =
+    typeof window !== "undefined" && window.location.hash.includes("access_token")
 
   useEffect(() => {
-    if (loading) return
-
-    // deteksi apakah sedang callback Supabase
-    const isOAuthCallback =
-      typeof window !== "undefined" && window.location.hash.includes("access_token")
-
-    // kalau belum login, langsung arahkan ke login
-    if (!isPublic && !user && !isOAuthCallback) {
+    if (!loading && !isRestoringSession && !isPublic && !user && !isOAuthCallback) {
       router.replace("/login")
     }
-  }, [loading, user, pathname, router])
+  }, [loading, isRestoringSession, user, pathname, router, isPublic, isOAuthCallback])
 
-  if (loading) return <LoadingScreen children={undefined} />
+  // Public routes: render langsung
+  if (isPublic) {
+    return <>{children}</>;
+  }
+
+  if (loading || isRestoringSession || !user && !isOAuthCallback) return <LoadingScreen children={undefined} />
 
   return <>{children}</>
 }
