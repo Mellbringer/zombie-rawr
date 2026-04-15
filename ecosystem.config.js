@@ -6,7 +6,7 @@ module.exports = {
             args: "start -p 3005",
             cwd: "./",
             exec_mode: "cluster",
-            instances: "max",
+            instances: "2",
             autorestart: true,
             watch: false,
             max_memory_restart: "3G",
