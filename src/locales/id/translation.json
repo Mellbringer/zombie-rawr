@@ -98,7 +98,9 @@
     "nicknameTakenTitle": "Nickname Telah Digunakan",
     "joinFailedTitle": "Gagal Bergabung",
     "unexpectedErrorTitle": "Kesalahan Tidak Terduga",
-    "unexpectedError": "Terjadi kesalahan. Coba lagi nanti."
+    "unexpectedError": "Terjadi kesalahan. Coba lagi nanti.",
+    "missingInputCode": "Kode game harus diisi!",
+    "missingNickname": "Gagal mendapatkan nickname profil Anda."
   },
   "start": "Mulai",
   "starting": "Memulai...",
@@ -232,7 +234,7 @@
   "play": "Main",
   "joinTitle": "🔥 Cara Gabung",
   "joinSteps": [
-    "Masukkan kode game dan namamu.",
+    "Masukkan kode game.",
     "Klik Gabung.",
     "(Opsional) Pilih karakter yang akan jadi jagoanmu.",
     "Bersiaplah… tunggu host memulai permainan."
