@@ -1,7 +1,7 @@
 "use client"
 
+import { supabase } from "@/lib/supabase/gfs-client";
 import { createContext, useContext, useEffect, useState } from "react"
-import { supabase, syncSessionCookie, getSessionFromCookie } from "@/lib/supabase"
 
 interface Profile {
     id: string
@@ -18,7 +18,6 @@ interface AuthContextType {
     user: any | null
     profile: Profile | null
     loading: boolean
-    isRestoringSession: boolean
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -38,12 +37,11 @@ async function ensureProfileWithRetry(
             // First, check if exists (quick select)
             const { data: existing, error: selectError } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('id, username, email, nickname, fullname, avatar_url, auth_user_id, favorite_quiz, role')
                 .eq('auth_user_id', currentUser.id)
                 .single()
 
-            if (selectError && selectError.code !== 'PGRST116') {
-                // PGRST116 = not found, yang normal. Error lain = retry
+            if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = No rows found, itu normal jika belum ada profile
                 throw selectError
             }
 
@@ -129,131 +127,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<any>(null)
     const [profile, setProfile] = useState<Profile | null>(null)
     const [loading, setLoading] = useState(true)
-    const [isProfileFetching, setIsProfileFetching] = useState(false) // Track fetch state
-    const [isRestoringSession, setIsRestoringSession] = useState(true)
 
     useEffect(() => {
-        const getUser = async () => {
+        const init = async () => {
             try {
-                // 1. Coba ambil sesi dari localStorage (cara normal)
-                let { data: { session } } = await supabase.auth.getSession()
-
-                // 2. Deteksi Zombie Session: Sesi lokal ada, tapi SSO cookie GA ADA (berarti sudah logout di app lain)
-                const cookieSession = getSessionFromCookie()
-                if (session && !cookieSession) {
-                    console.log('[SSO] Terdeteksi sisa sesi lokal padahal SSO cookie kosong. Menghapus sesi...')
-                    await supabase.auth.signOut()
-                    session = null
-                }
-
-                // 3. Jika tidak ada sesi di localStorage, coba pulihkan dari shared cookie
-                if (!session && cookieSession) {
-                    console.log('[SSO] Mencoba pulihkan sesi dari shared cookie (setSession)...')
-                    const { data, error } = await supabase.auth.setSession(cookieSession)
-                    if (!error && data.session) {
-                        session = data.session
-                        console.log('[SSO] Sesi berhasil dipulihkan!')
-                    } else {
-                        console.warn('[SSO] Token expired, menghapus cookie')
-                        syncSessionCookie(null)
-                    }
-                }
-
+                const { data: { session } } = await supabase.auth.getSession()
                 const currentUser = session?.user ?? null
+
                 setUser(currentUser)
 
                 if (currentUser && session) {
-                    // Sync tokens ke shared cookie
-                    syncSessionCookie({
-                        access_token: session.access_token,
-                        refresh_token: session.refresh_token
-                    })
-                    await loadProfile(currentUser, setProfile, setIsProfileFetching, setLoading)
+                    // Don't 'await' here to allow loading state to finish quickly
+                    loadProfile(currentUser, setProfile, () => { }, setLoading)
                 } else {
-                    setProfile(null)
                     setLoading(false)
                 }
-            } catch (error) {
-                console.error('Session error:', error)
-                setUser(null)
-                setProfile(null)
+            } catch (err) {
+                console.error("Auth init error:", err)
                 setLoading(false)
             }
-            setIsRestoringSession(false)
         }
-        getUser()
+
+        init()
 
         const { data: listener } = supabase.auth.onAuthStateChange(
             async (event, session) => {
                 const currentUser = session?.user ?? null
+
                 setUser(currentUser)
 
-                if (event === 'SIGNED_IN' && currentUser && session) {
-                    // Sync tokens ke shared cookie saat login berhasil
-                    syncSessionCookie({
-                        access_token: session.access_token,
-                        refresh_token: session.refresh_token
+                if (currentUser) {
+                    // Non-blocking load profile
+                    loadProfile(currentUser, setProfile, () => {
+                        setLoading(false)
                     })
-                    loadProfile(currentUser, setProfile, setIsProfileFetching).catch(console.error)
-                } else if (event === 'TOKEN_REFRESHED' && session) {
-                    // Update cookie saat token di-refresh (token baru untuk semua app)
-                    syncSessionCookie({
-                        access_token: session.access_token,
-                        refresh_token: session.refresh_token
-                    })
-                } else if (event === 'SIGNED_OUT' || !currentUser) {
-                    // Hapus shared cookie saat logout → semua app ikut logout
-                    syncSessionCookie(null)
+                } else {
                     setProfile(null)
-                    setIsProfileFetching(false)
+                    setLoading(false)
                 }
             }
         )
 
-        // SINKRONISASI ANTAR-TAB: Cek cookie saat user kembali ke tab ini
-        const syncFromCookie = async () => {
-            const cookieSession = getSessionFromCookie()
-
-            // Logout sync: cookie kosong tapi kita masih login
-            if (!cookieSession) {
-                const { data: { session: localSession } } = await supabase.auth.getSession()
-                if (localSession) {
-                    console.log('[SSO] Logout terdeteksi di app lain, sinkronisasi...')
-                    await supabase.auth.signOut()
-                    window.location.reload()
-                }
-                return
-            }
-
-            // Token sync: cookie ada dan berbeda dari lokal kita
-            const { data: { session: localSession } } = await supabase.auth.getSession()
-            if (!localSession) {
-                // Kita belum login tapi cookie ada → login sync
-                console.log('[SSO] Login terdeteksi di app lain, sinkronisasi...')
-                await supabase.auth.setSession(cookieSession)
-            } else if (localSession.access_token !== cookieSession.access_token) {
-                // Token berbeda → update tanpa reload
-                console.log('[SSO] Token baru terdeteksi, mengupdate session lokal...')
-                await supabase.auth.setSession(cookieSession)
-            }
-        }
-
-        // Event-based: langsung sinkron saat user kembali ke tab
-        window.addEventListener('focus', syncFromCookie)
-        const onVisibilityChange = () => {
-            if (document.visibilityState === 'visible') syncFromCookie()
-        }
-        window.addEventListener('visibilitychange', onVisibilityChange)
-
         return () => {
             listener.subscription.unsubscribe()
-            window.removeEventListener('focus', syncFromCookie)
-            window.removeEventListener('visibilitychange', onVisibilityChange)
         }
     }, [])
 
     return (
-        <AuthContext.Provider value={{ user, profile, loading, isRestoringSession }}>
+        <AuthContext.Provider value={{ user, profile, loading }}>
             {children}
         </AuthContext.Provider>
     )

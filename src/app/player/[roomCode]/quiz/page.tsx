@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { CircleQuestionMark, Clock, Heart, XCircle, Zap, CheckCircle } from "lucide-react"
 import { useRouter, useParams } from "next/navigation"
-import { mysupa } from "@/lib/supabase"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import ZombieFeedback from "@/components/game/ZombieFeedback"
@@ -13,6 +12,7 @@ import { generateXID } from "@/lib/id-generator"
 import Image from "next/image"
 import { calculateCountdown } from "@/lib/server-time"
 import { AnimatePresence, motion } from "framer-motion"
+import { supabaseGame } from "@/lib/supabase/game-client";
 
 export interface Session {
   id: string
@@ -117,7 +117,7 @@ export default function QuizPage() {
           // If started_at is missing, fetch fresh session for correct timer
           let sessionToUse = s
           if (!s.started_at) {
-            const { data: freshSess } = await mysupa
+            const { data: freshSess } = await supabaseGame
               .from("sessions")
               .select("started_at, total_time_minutes, countdown_started_at, status")
               .eq("game_pin", gamePin)
@@ -151,7 +151,7 @@ export default function QuizPage() {
       }
 
       try {
-        const { data: sess, error: e1 } = await mysupa
+        const { data: sess, error: e1 } = await supabaseGame
           .from("sessions")
           .select("*")
           .eq("game_pin", gamePin)
@@ -162,7 +162,7 @@ export default function QuizPage() {
         const pid = localStorage.getItem("playerId")
         if (!pid) throw new Error("No player ID")
 
-        const { data: player, error: e2 } = await mysupa
+        const { data: player, error: e2 } = await supabaseGame
           .from("participants")
           .select("*")
           .eq("id", pid)
@@ -247,7 +247,7 @@ export default function QuizPage() {
       if (showFeedback || isProcessingAnswer) return
 
       try {
-        const { data } = await mysupa
+        const { data } = await supabaseGame
           .from("participants")
           .select("*")
           .eq("id", currentPlayer.id)
@@ -269,7 +269,7 @@ export default function QuizPage() {
     }
 
     // Listen for participant updates
-    const playerChannel = mysupa
+    const playerChannel = supabaseGame
       .channel(`player:${currentPlayer.id}`)
       .on(
         "postgres_changes",
@@ -299,7 +299,7 @@ export default function QuizPage() {
       })
 
     // Listen for session status changes (when host ends game)
-    const sessionChannel = mysupa
+    const sessionChannel = supabaseGame
       .channel(`session:${session.id}`)
       .on(
         "postgres_changes",
@@ -312,7 +312,7 @@ export default function QuizPage() {
             // FIX: Fetch fresh participant data before redirect (avoid stale closure)
             const playerId = localStorage.getItem("playerId")
             if (playerId) {
-              const { data: freshPlayer } = await mysupa
+              const { data: freshPlayer } = await supabaseGame
                 .from("participants")
                 .select("*")
                 .eq("id", playerId)
@@ -336,8 +336,8 @@ export default function QuizPage() {
       console.log("Cleaning up quiz page effect")
       // Do NOT set isMountedRef.current = false here, as it breaks re-runs!
       if (poll) clearInterval(poll)
-      mysupa.removeChannel(playerChannel)
-      mysupa.removeChannel(sessionChannel)
+      supabaseGame.removeChannel(playerChannel)
+      supabaseGame.removeChannel(sessionChannel)
     }
   }, [session?.id, currentPlayer?.id, isAnswered, showFeedback, isProcessingAnswer, totalQuestions, playerHealth, correctAnswers])
 
@@ -417,7 +417,7 @@ export default function QuizPage() {
       const scorePerQ = totalQuestions > 0 ? Math.floor(100 / totalQuestions) : 100
       const newScore = newCorrect * scorePerQ
 
-      const { error } = await mysupa.from("participants").update({
+      const { error } = await supabaseGame.from("participants").update({
         answers: answersNew,
         correct_answers: newCorrect,
         score: newScore,
@@ -459,7 +459,7 @@ export default function QuizPage() {
     if (!currentPlayer || !session || isRedirecting) return
     setIsRedirecting(true)
 
-    await mysupa.from("participants").update({
+    await supabaseGame.from("participants").update({
       finished_at: new Date().toISOString(),
       completion: true,
       health: { ...currentPlayer.health, current: Math.max(0, health) },

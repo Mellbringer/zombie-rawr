@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { mysupa, supabase } from "@/lib/supabase";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import Confetti from "react-confetti";
@@ -17,6 +16,8 @@ import {
 import { useHostGuard } from "@/lib/host-guard";
 import { generateGamePin } from "@/utils/gameHelpers";
 import LoadingScreen from "@/components/LoadingScreen";
+import { supabaseGame } from "@/lib/supabase/game-client";
+import { supabase } from "@/lib/supabase/gfs-client";
 
 const characterGifs = [
   { type: "robot1", name: "Hijau", src: "/character/player/character.webp", alt: "Karakter Hijau" },
@@ -76,7 +77,7 @@ export default function ResultsHostPage() {
     try {
       setIsLoading(true);
 
-      const { data: session, error: sessErr } = await mysupa
+      const { data: session, error: sessErr } = await supabaseGame
         .from("sessions")
         .select("id, quiz_id, question_limit, started_at")
         .eq("game_pin", roomCode.toUpperCase())
@@ -84,7 +85,7 @@ export default function ResultsHostPage() {
 
       if (sessErr || !session) throw new Error("Session tidak ditemukan");
 
-      const { data: participants } = await mysupa
+      const { data: participants } = await supabaseGame
         .from("participants")
         .select("*")
         .eq("session_id", session.id);
@@ -164,7 +165,7 @@ export default function ResultsHostPage() {
     setShowLoading(true);
 
     try {
-      const { data: oldSess } = await mysupa
+      const { data: oldSess } = await supabaseGame
         .from("sessions")
         .select("quiz_id, host_id, question_limit, total_time_minutes, difficulty, current_questions")
         .eq("game_pin", roomCode.toUpperCase())
@@ -178,7 +179,7 @@ export default function ResultsHostPage() {
 
       const newPin = generateGamePin(6);
 
-      await mysupa.from("sessions").insert({
+      await supabaseGame.from("sessions").insert({
         game_pin: newPin,
         quiz_id: oldSess.quiz_id,
         host_id: oldSess.host_id,

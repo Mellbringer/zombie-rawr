@@ -2,18 +2,18 @@
 
 import { useEffect, useState, useCallback, useRef } from "react"
 import { useParams, useRouter } from "next/navigation" // useSearchParams dihapus
-import { mysupa, supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Trophy, Skull, Heart, Target, Clock, Home, RotateCcw, AlertTriangle, Zap } from "lucide-react"
 import { motion, AnimatePresence, type Transition } from "framer-motion"
 import { HorrorCard } from "@/components/ui/horror-card"
-import type { GameRoom } from "@/lib/supabase"
+import type { GameRoom } from "@/lib/types"
 import Image from "next/image"
 import { useTranslation } from "react-i18next"
 import { debounce } from "lodash"
 import Link from "next/link"
 import { Session } from "../quiz/page"
 import LoadingScreen from "@/components/LoadingScreen"
+import { supabaseGame } from "@/lib/supabase/game-client";
 
 // Interface tidak berubah
 interface GameCompletion {
@@ -128,7 +128,7 @@ export default function ResultsPage() {
 
     try {
       // 1. Ambil participant langsung
-      const { data: p, error } = await mysupa
+      const { data: p, error } = await supabaseGame
         .from("participants")
         .select("nickname, character_type, score, correct_answers, health, answers, finished_at")
         .eq("id", playerId)
@@ -163,7 +163,7 @@ export default function ResultsPage() {
   useEffect(() => {
     const load = async () => {
       // Ambil session dulu biar bisa hitung survival
-      const { data: sess } = await mysupa
+      const { data: sess } = await supabaseGame
         .from("sessions")
         .select("started_at, question_limit")
         .eq("game_pin", roomCode.toUpperCase())
@@ -194,7 +194,7 @@ export default function ResultsPage() {
       console.log("Komponen dilepas (unmounting)")
       isMountedRef.current = false
       channelsRef.current.forEach((channel) => {
-        supabase.removeChannel(channel)
+        supabaseGame.removeChannel(channel)
       })
       channelsRef.current = []
     }

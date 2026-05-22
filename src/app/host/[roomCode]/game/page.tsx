@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { mysupa, supabase } from "@/lib/supabase"; // GANTI DARI supabase KE mysupa
 import Background3 from "@/components/game/host/Background3";
 import GameUI from "@/components/game/host/GameUI";
 import { motion } from "framer-motion";
@@ -28,6 +27,8 @@ import { StopCircle, Volume2, VolumeX } from "lucide-react";
 
 import { calculateCountdown } from "@/lib/server-time";
 import { AnimatePresence } from "framer-motion";
+import { supabaseGame } from "@/lib/supabase/game-client";
+import { supabase } from "@/lib/supabase/gfs-client";
 
 const ZOMBIE_MOBILE_VERTICAL_OFFSET = 90;
 const ZOMBIE_MOBILE_HORIZONTAL_OFFSET = 20;
@@ -86,8 +87,8 @@ interface ZombieState {
 
 const syncResultsToMainSupabase = async (sessionId: string) => {
   try {
-    // 1. Ambil session dari mysupa (QuizRush)
-    const { data: sess, error: sessError } = await mysupa
+    // 1. Ambil session dari supabaseGame (QuizRush)
+    const { data: sess, error: sessError } = await supabaseGame
       .from("sessions")
       .select("*")
       .eq("id", sessionId)
@@ -101,7 +102,7 @@ const syncResultsToMainSupabase = async (sessionId: string) => {
     const totalQuestions = sess.question_limit || sess.current_questions.length;
 
     // 2. Ambil semua participant
-    const { data: participants, error: partError } = await mysupa
+    const { data: participants, error: partError } = await supabaseGame
       .from("participants")
       .select(
         "id, user_id, nickname, character_type, score, correct_answers, answers, finished_at, health"
@@ -159,7 +160,7 @@ const syncResultsToMainSupabase = async (sessionId: string) => {
       participantsCount: formattedParticipants.length,
     });
 
-    // 5. Kirim ke gameforsmart pake client supabase (bukan mysupa)
+    // 5. Kirim ke gameforsmart pake client supabase (bukan supabaseGame)
     const { error } = await supabase.from("game_sessions").upsert(
       {
         game_pin: sess.game_pin,
@@ -235,7 +236,7 @@ export default function HostGamePage() {
 
     try {
       // 1) Mark all pending participants as finished
-      const { data: pending } = await mysupa
+      const { data: pending } = await supabaseGame
         .from("participants")
         .select("*")
         .eq("session_id", session.id)
@@ -245,7 +246,7 @@ export default function HostGamePage() {
         await Promise.all(
           pending.map((p: any) => {
             // FIXED: Tetap pertahankan health yang ada, jangan di-0-kan
-            return mysupa
+            return supabaseGame
               .from("participants")
               .update({
                 finished_at: finishAt,
@@ -258,7 +259,7 @@ export default function HostGamePage() {
       }
 
       // 2) Update session status
-      await mysupa
+      await supabaseGame
         .from("sessions")
         .update({ status: "finished", ended_at: finishAt })
         .eq("id", session.id);
@@ -276,7 +277,7 @@ export default function HostGamePage() {
   const fetchData = useCallback(async () => {
     if (!gamePin) return;
 
-    const { data: sess, error: sessErr } = await mysupa
+    const { data: sess, error: sessErr } = await supabaseGame
       .from("sessions")
       .select("*")
       .eq("game_pin", gamePin.toUpperCase())
@@ -293,7 +294,7 @@ export default function HostGamePage() {
 
     setSession(sess);
 
-    const { data: parts } = await mysupa
+    const { data: parts } = await supabaseGame
       .from("participants")
       .select("*")
       .eq("session_id", sess.id)
@@ -351,7 +352,7 @@ export default function HostGamePage() {
   useEffect(() => {
     if (!session?.id) return;
 
-    const channel = mysupa
+    const channel = supabaseGame
       .channel(`host-${session.id}`)
       .on(
         "postgres_changes",
@@ -383,7 +384,7 @@ export default function HostGamePage() {
       .subscribe();
 
     return () => {
-      mysupa.removeChannel(channel);
+      supabaseGame.removeChannel(channel);
     };
   }, [session?.id]);
 
@@ -454,7 +455,7 @@ export default function HostGamePage() {
             : null
         );
 
-        await mysupa
+        await supabaseGame
           .from("sessions")
           .update({
             status: "active",
@@ -661,7 +662,7 @@ export default function HostGamePage() {
               updates.finished_at = new Date().toISOString();
             }
 
-            const { error } = await mysupa
+            const { error } = await supabaseGame
               .from("participants")
               .update(updates)
               .eq("id", p.id);
@@ -700,8 +701,8 @@ export default function HostGamePage() {
       const finishAndSync = async () => {
         try {
           setIsFinishing(true);
-          // 1. Update status di QuizRush (mysupa)
-          await mysupa
+          // 1. Update status di QuizRush (supabaseGame)
+          await supabaseGame
             .from("sessions")
             .update({
               status: "finished",
@@ -744,7 +745,7 @@ export default function HostGamePage() {
       const finishAt = new Date().toISOString();
       try {
         // 1) fetch participants who haven't finished yet
-        const { data: pending, error: pendingErr } = await mysupa
+        const { data: pending, error: pendingErr } = await supabaseGame
           .from("participants")
           .select("*")
           .eq("session_id", session.id)
@@ -761,7 +762,7 @@ export default function HostGamePage() {
                 ...(p.health || {}),
                 current: 0,
               };
-              return mysupa
+              return supabaseGame
                 .from("participants")
                 .update({
                   finished_at: finishAt,
@@ -775,7 +776,7 @@ export default function HostGamePage() {
         }
 
         // 3) update session status to finished
-        await mysupa
+        await supabaseGame
           .from("sessions")
           .update({ status: "finished", ended_at: finishAt })
           .eq("id", session.id);

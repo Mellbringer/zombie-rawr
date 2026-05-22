@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { supabase } from "@/lib/supabase"
+import { supabase } from "@/lib/supabase/gfs-client"
 
 // Export interfaces (updated for compatibility with new schema)
 export interface TransformedPlayer {

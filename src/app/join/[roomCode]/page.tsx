@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { mysupa } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
+import { supabaseGame } from "@/lib/supabase/game-client";
 
 export default function JoinPage() {
     const router = useRouter();
@@ -37,7 +37,7 @@ export default function JoinPage() {
                 let nickname = profile.nickname || profile.fullname || profile.username || user.email?.split('@')[0];
 
                 // Call RPC
-                const { data, error } = await mysupa.rpc("join_game", {
+                const { data, error } = await supabaseGame.rpc("join_game", {
                     p_room_code: roomCode,
                     p_user_id: profile.id,
                     p_nickname: nickname

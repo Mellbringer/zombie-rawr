@@ -15,7 +15,6 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { mysupa } from "@/lib/supabase"; // GANTI INI SAJA
 import { shuffleArray } from "@/utils/gameHelpers";
 import SoulStatus from "@/components/game/SoulStatus";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -27,6 +26,7 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useDetectBackAction } from "@/hooks/useDetectBackAction";
 import LoadingScreen from "@/components/LoadingScreen";
+import { supabaseGame } from "@/lib/supabase/game-client";
 
 interface Session {
   id: string;
@@ -172,7 +172,7 @@ export default function LobbyPage() {
       try {
         setIsLoading(true);
 
-        const { data: sess, error } = await mysupa
+        const { data: sess, error } = await supabaseGame
           .from("sessions")
           .select("*")
           .eq("game_pin", roomCode)
@@ -187,7 +187,7 @@ export default function LobbyPage() {
         setSession(sess);
         setQuestions(sess.current_questions || []);  // TAMBAHAN: Fetch & set soal yang dipilih
 
-        const { data: parts } = await mysupa
+        const { data: parts } = await supabaseGame
           .from("participants")
           .select("*")
           .eq("session_id", sess.id)
@@ -224,7 +224,7 @@ export default function LobbyPage() {
     setIsPrefetchingQuiz(true);
     try {
       // Fetch ulang session terbaru (untuk pastikan started_at, difficulty, dll. sudah di-set saat start game)
-      const { data: freshSession } = await mysupa
+      const { data: freshSession } = await supabaseGame
         .from("sessions")
         .select("*")
         .eq("game_pin", roomCode)
@@ -236,7 +236,7 @@ export default function LobbyPage() {
       const playerId = localStorage.getItem("playerId");
       if (!playerId) throw new Error("Player ID tidak ditemukan");
 
-      const { data: freshPlayer } = await mysupa
+      const { data: freshPlayer } = await supabaseGame
         .from("participants")
         .select("*")
         .eq("session_id", freshSession.id)
@@ -253,7 +253,7 @@ export default function LobbyPage() {
       if (!questionOrder || questionOrder.length !== questionCount) {
         questionOrder = shuffleArray([...Array(questionCount).keys()]); // [0,1,2,...n-1] lalu di-shuffle
 
-        await mysupa
+        await supabaseGame
           .from("participants")
           .update({ question_order: questionOrder })
           .eq("id", playerId);
@@ -281,7 +281,7 @@ export default function LobbyPage() {
   useEffect(() => {
     if (!session?.id) return;
 
-    const participantsChannel = mysupa
+    const participantsChannel = supabaseGame
       .channel(`participants:${session.id}`)
       .on(
         "postgres_changes",
@@ -325,7 +325,7 @@ export default function LobbyPage() {
       )
       .subscribe();
 
-    const sessionChannel = mysupa
+    const sessionChannel = supabaseGame
       .channel(`session:${session.id}`)
       .on(
         'postgres_changes',
@@ -344,8 +344,8 @@ export default function LobbyPage() {
       .subscribe();
 
     return () => {
-      mysupa.removeChannel(participantsChannel);
-      mysupa.removeChannel(sessionChannel);
+      supabaseGame.removeChannel(participantsChannel);
+      supabaseGame.removeChannel(sessionChannel);
     };
   }, [session?.id, currentPlayer?.id, router, isPrefetchingQuiz, roomCode]);  // Tambah deps untuk prefetch
 
@@ -395,7 +395,7 @@ export default function LobbyPage() {
     try {
       setSelectedCharacter(characterValue);
 
-      const { error } = await mysupa
+      const { error } = await supabaseGame
         .from("participants")
         .update({ character_type: characterValue })
         .eq("id", currentPlayer.id);
@@ -412,7 +412,7 @@ export default function LobbyPage() {
     if (!currentPlayer) return;
     try {
       localStorage.setItem("exitBySelf", "1");
-      await mysupa.from("participants").delete().eq("id", currentPlayer.id);
+      await supabaseGame.from("participants").delete().eq("id", currentPlayer.id);
       localStorage.removeItem("playerId");
       localStorage.removeItem("sessionId");
       localStorage.removeItem("nickname");

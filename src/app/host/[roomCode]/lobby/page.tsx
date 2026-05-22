@@ -20,7 +20,6 @@ import {
   VolumeX,
   X,
 } from "lucide-react";
-import { mysupa } from "@/lib/supabase"; // SESUAI QUIZRUSH
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import QRCode from "react-qr-code";
@@ -42,6 +41,7 @@ import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
 import { useHostGuard } from "@/lib/host-guard";
 import LoadingScreen from "@/components/LoadingScreen";
+import { supabaseGame } from "@/lib/supabase/game-client";
 
 interface Session {
   id: string;
@@ -211,7 +211,7 @@ export default function HostPage() {
 
   const setSessionStatus = async (status: Session["status"]) => {
     if (!session?.id) return;
-    const { error } = await mysupa
+    const { error } = await supabaseGame
       .from("sessions")
       .update({
         status,
@@ -235,7 +235,7 @@ export default function HostPage() {
     if (!roomCode) return;
 
     try {
-      const { data: sess, error: sessErr } = await mysupa
+      const { data: sess, error: sessErr } = await supabaseGame
         .from("sessions")
         .select("*")
         .eq("game_pin", roomCode)
@@ -249,7 +249,7 @@ export default function HostPage() {
 
       setSession(sess);
 
-      const { data: parts, error: partsErr } = await mysupa
+      const { data: parts, error: partsErr } = await supabaseGame
         .from("participants")
         .select("*")
         .eq("session_id", sess.id)
@@ -285,7 +285,7 @@ export default function HostPage() {
     setIsLoadingMore(true);
 
     try {
-      const { data: moreParts, error: moreErr } = await mysupa
+      const { data: moreParts, error: moreErr } = await supabaseGame
         .from("participants")
         .select("*")
         .eq("session_id", session.id)
@@ -326,7 +326,7 @@ export default function HostPage() {
   useEffect(() => {
     if (!session?.id) return;
 
-    const sessionChannel = mysupa
+    const sessionChannel = supabaseGame
       .channel(`session:${session.id}`)
       .on(
         "postgres_changes",
@@ -343,7 +343,7 @@ export default function HostPage() {
       )
       .subscribe();
 
-    const participantsChannel = mysupa
+    const participantsChannel = supabaseGame
       .channel(`participants:${session.id}`)
       .on(
         "postgres_changes",
@@ -357,8 +357,8 @@ export default function HostPage() {
       .subscribe();
 
     return () => {
-      mysupa.removeChannel(sessionChannel);
-      mysupa.removeChannel(participantsChannel);
+      supabaseGame.removeChannel(sessionChannel);
+      supabaseGame.removeChannel(participantsChannel);
     };
   }, [session?.id, roomCode, router]);
 
@@ -372,7 +372,7 @@ export default function HostPage() {
 
   const confirmKickPlayer = async () => {
     if (!selectedPlayer || !session) return;
-    const { error } = await mysupa
+    const { error } = await supabaseGame
       .from("participants")
       .delete()
       .eq("id", selectedPlayer.id)
@@ -395,7 +395,7 @@ export default function HostPage() {
     await syncServerTime();
 
     // Just trigger countdown, redirection happens via Realtime
-    const { error } = await mysupa
+    const { error } = await supabaseGame
       .from("sessions")
       .update({ countdown_started_at: new Date().toISOString() })
       .eq("id", session.id);

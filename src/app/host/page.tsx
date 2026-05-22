@@ -26,7 +26,6 @@ import {
   HelpCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { mysupa, supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { TooltipProvider } from "@radix-ui/react-tooltip";
@@ -51,6 +50,8 @@ import {
 } from "@/components/ui/select";
 import { generateGamePin } from "@/utils/gameHelpers";
 import { set } from "lodash";
+import { supabaseGame } from "@/lib/supabase/game-client";
+import { supabase } from "@/lib/supabase/gfs-client";
 
 // Custom hook untuk debounce
 function useDebounce<T>(value: T, delay: number): T {
@@ -354,14 +355,14 @@ export default function QuizSelectPage() {
           return;
         }
 
-        const { error: gameError } = await mysupa
+        const { error: gameError } = await supabaseGame
           .from("sessions")
           .insert(primarySession)
           .select("id")
           .single();
 
         if (gameError) {
-          console.error("Error creating session (mysupa):", gameError);
+          console.error("Error creating session (supabaseGame):", gameError);
 
           // 3) ROLLBACK di supabase utama
           await supabase.from("game_sessions").delete().eq("id", sessId);

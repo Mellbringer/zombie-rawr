@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { mysupa } from "@/lib/supabase";
 import { generateXID } from "@/lib/id-generator";
+import { supabaseGame } from "@/lib/supabase/game-client";
 
 // Character options for avatar
 const CHARACTER_OPTIONS = [
@@ -174,7 +174,7 @@ export function BotInstance({
             const character_type = pickRandom(CHARACTER_OPTIONS);
 
             try {
-                const { data: participant, error } = await mysupa
+                const { data: participant, error } = await supabaseGame
                     .from("participants")
                     .insert({
                         session_id: sessionId,
@@ -231,7 +231,7 @@ export function BotInstance({
             // Target: < 10 requests per 10 seconds total across all bots
             if (Math.random() < personality.restlessness * 0.2) {
                 const newCharacter = pickRandom(CHARACTER_OPTIONS);
-                await mysupa
+                await supabaseGame
                     .from("participants")
                     .update({ character_type: newCharacter })
                     .eq("id", participantId);
@@ -299,7 +299,7 @@ export function BotInstance({
 
                 const isCorrect = selectedIndex.toString() === question.correct;
                 // Get current state from database (like player quiz page does)
-                const { data: currentParticipant } = await mysupa
+                const { data: currentParticipant } = await supabaseGame
                     .from("participants")
                     .select("answers, health, correct_answers")
                     .eq("id", participantId)
@@ -337,7 +337,7 @@ export function BotInstance({
                 const isEliminated = newHealth <= 0;
 
                 try {
-                    await mysupa
+                    await supabaseGame
                         .from("participants")
                         .update({
                             answers: answersNew,

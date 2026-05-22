@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Mail, Lock, LogIn, AlertCircle, Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
 import { motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import toast from "react-hot-toast";
@@ -21,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext"; // Import useAuth
 import Image from "next/image";
 import LoadingScreen from "@/components/LoadingScreen";
 import { FaHandPointRight } from 'react-icons/fa';
+import { supabase } from "@/lib/supabase/gfs-client";
 
 // Tipe untuk efek visual (sama seperti homepage)
 interface BloodDrip {

@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Gamepad2, Users, Play, Hash, Zap, Skull, Bone, RefreshCw, HelpCircle, RotateCw, LogOut, Menu, Globe, User, X, BookOpen, ArrowLeft, ArrowRight, Camera } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { mysupa, supabase } from "@/lib/supabase";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +30,8 @@ import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { usePWAInstall } from "@/contexts/pwaContext";
 import PWAInstallBanner from "@/components/ui/pwa-install-banner";
+import { supabaseGame } from "@/lib/supabase/game-client";
+import { supabase } from "@/lib/supabase/gfs-client";
 
 
 // Dynamically import the QR Scanner
@@ -225,7 +226,7 @@ export default function HomePage() {
 
     try {
       // Call RPC join_game (same as auto-join)
-      const { data, error } = await mysupa.rpc("join_game", {
+      const { data, error } = await supabaseGame.rpc("join_game", {
         p_room_code: gameCode.toUpperCase(),
         p_user_id: profile?.id || null,
         p_nickname: nickname.trim()

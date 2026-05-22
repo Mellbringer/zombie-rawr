@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Skull, Bone, HeartPulse, Ghost, Zap, Clock, ArrowRight, Settings, List, ChevronLeft, ChevronRight, Minus, Plus, Volume2, VolumeX } from "lucide-react";
-import { supabase, mysupa } from "@/lib/supabase";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import { useTranslation } from "react-i18next";
@@ -15,6 +14,8 @@ import Link from "next/link";
 import toast from "react-hot-toast";
 import { shuffleArray } from "@/utils/gameHelpers";
 import LoadingScreen from "@/components/LoadingScreen";
+import { supabase } from "@/lib/supabase/gfs-client";
+import { supabaseGame } from "@/lib/supabase/game-client";
 
 const validChaserTypes = ["zombie", "monster1", "monster2", "monster3", "darknight"] as const;
 type ChaserType = typeof validChaserTypes[number];
@@ -175,7 +176,7 @@ export default function CharacterSelectPage() {
         current_questions: shuffleArray(quiz.questions).slice(0, questionCount),
       };
 
-      const { error } = await mysupa
+      const { error } = await supabaseGame
         .from("sessions")
         .update(settings)
         .eq("game_pin", roomCode);

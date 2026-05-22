@@ -6,7 +6,7 @@ import { useEffect } from "react"
 import LoadingScreen from "./LoadingScreen"
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
-  const { user, loading, isRestoringSession } = useAuth()
+  const { user, loading } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
 
@@ -19,17 +19,17 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
     typeof window !== "undefined" && window.location.hash.includes("access_token")
 
   useEffect(() => {
-    if (!loading && !isRestoringSession && !isPublic && !user && !isOAuthCallback) {
+    if (!loading && !isPublic && !user && !isOAuthCallback) {
       router.replace("/login")
     }
-  }, [loading, isRestoringSession, user, pathname, router, isPublic, isOAuthCallback])
+  }, [loading, user, pathname, router, isPublic, isOAuthCallback])
 
   // Public routes: render langsung
   if (isPublic) {
     return <>{children}</>;
   }
 
-  if (loading || isRestoringSession || !user && !isOAuthCallback) return <LoadingScreen children={undefined} />
+  if (loading || !user && !isOAuthCallback) return <LoadingScreen children={undefined} />
 
   return <>{children}</>
 }
