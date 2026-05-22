@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 
-async function createGFSServer() {
+export async function createGFSServer() {
     const cookieStore = await cookies();
     const host = (await headers()).get("host") || "";
 
@@ -34,5 +34,3 @@ async function createGFSServer() {
         }
     );
 }
-
-export const supabaseServer = createGFSServer();
