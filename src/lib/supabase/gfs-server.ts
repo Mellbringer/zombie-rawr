@@ -34,3 +34,5 @@ export async function createGFSServer() {
         }
     );
 }
+
+export const supabaseServer = await createGFSServer();
